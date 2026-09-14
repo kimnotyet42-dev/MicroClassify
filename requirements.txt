@@ -1,0 +1,12 @@
+torch>=2.1,<2.7
+torchvision>=0.16,<0.22
+transformers>=4.46,<5
+open_clip_torch>=2.24,<4
+einops>=0.7,<1
+numpy>=1.24,<3
+scipy>=1.10,<2
+scikit-image>=0.21,<1
+scikit-learn>=1.3,<2
+pillow>=9.5,<13
+tqdm>=4.65,<5
+matplotlib>=3.7,<4

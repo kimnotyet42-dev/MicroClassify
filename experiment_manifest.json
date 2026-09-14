@@ -1,0 +1,72 @@
+{
+  "manuscript": "../main.tex",
+  "experiments": [
+    {
+      "id": "module_backbone_ablation",
+      "paper_outputs": ["Table: module ablation", "Table: cross-backbone evaluation", "ZooLake2 5-shot rows"],
+      "module": "experiments.module_backbone_ablation",
+      "resume": true,
+      "result": "module_backbone_ablation.csv"
+    },
+    {
+      "id": "emds7_fscil",
+      "paper_outputs": ["EMDS-7 FSCIL table", "base-shot table", "session curve", "per-split table"],
+      "module": "experiments.emds7_fscil",
+      "resume": true,
+      "result": "emds7_fscil.csv",
+      "reference": {"base_shot_25_w_graph_z_aa": 85.6, "tolerance": 0.05}
+    },
+    {
+      "id": "threshold_ablation",
+      "paper_outputs": ["self-collected binary table", "EMDS-7 one-vs-rest scan", "threshold ablation"],
+      "module": "experiments.threshold_ablation",
+      "args": ["--suite", "all", "--workers", "8"],
+      "resume": true,
+      "result": "threshold_ablation.csv",
+      "reference": {"golden_mussel_f1": 97.7, "daphnia_f1": 92.9, "tolerance": 0.05}
+    },
+    {
+      "id": "binary_model_comparison",
+      "paper_outputs": ["EMDS-7 foundation-model classifier comparison"],
+      "module": "experiments.binary_model_comparison",
+      "resume": true,
+      "result": "binary_model_comparison.csv"
+    },
+    {
+      "id": "zoolake2_shot_curve",
+      "paper_outputs": ["ZooLake2 shot curve"],
+      "module": "experiments.zoolake2_shot_curve",
+      "resume": true,
+      "result": "zoolake2_shot_curve.csv",
+      "reference": {"shot_24_w_graph_z": 80.9, "tolerance": 0.05}
+    },
+    {
+      "id": "effective_resolution",
+      "paper_outputs": ["EMDS-7 effective-resolution figure"],
+      "module": "experiments.effective_resolution",
+      "resume": true,
+      "result": "effective_resolution.csv",
+      "reference": {"resolution_224_accuracy": 78.4, "resolution_32_accuracy": 40.5, "tolerance": 0.05}
+    },
+    {
+      "id": "graph_parameter_sensitivity",
+      "paper_outputs": ["ZooLake2 kNN sensitivity", "ZooLake2 bandwidth sensitivity"],
+      "module": "experiments.graph_parameter_sensitivity",
+      "resume": true,
+      "result": "zoolake2_graph_sensitivity.csv"
+    },
+    {
+      "id": "runtime",
+      "paper_outputs": ["runtime table"],
+      "module": "experiments.runtime_benchmark",
+      "resume": false,
+      "result": "runtime_benchmark.csv",
+      "note": "Timing varies by hardware; validate the protocol and units rather than exact wall time."
+    }
+  ],
+  "plots": [
+    {"id": "fscil_sessions", "module": "plots.plot_fscil_sessions"},
+    {"id": "zoolake2_shot_curve_plot", "module": "plots.plot_zoolake2_shot_curve"},
+    {"id": "effective_resolution_plot", "module": "plots.plot_effective_resolution"}
+  ]
+}

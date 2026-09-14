@@ -1,0 +1,8 @@
+cache/
+results/
+figures/
+configs/paths.ini
+models/
+__pycache__/
+*.py[cod]
+.venv/

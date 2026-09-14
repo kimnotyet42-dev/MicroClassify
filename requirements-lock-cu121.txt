@@ -1,0 +1,13 @@
+# Verified local reference environment (Python 3.11, CUDA 12.1).
+torch==2.5.1+cu121
+torchvision==0.20.1+cu121
+transformers==4.56.0
+open_clip_torch==3.3.0
+einops==0.8.1
+numpy==2.2.6
+scipy==1.15.3
+scikit-image==0.25.2
+scikit-learn==1.7.2
+pillow==12.2.0
+tqdm==4.68.1
+matplotlib==3.10.9
