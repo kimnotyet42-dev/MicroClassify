@@ -104,6 +104,16 @@ Each episode computes its pairwise distance matrix once and reuses it for all
 neighborhood and bandwidth settings. Raw per-episode values and a summary CSV
 are written incrementally.
 
+### EMDS-7 neighborhood-size sensitivity
+
+```bash
+python -m experiments.emds7_graph_parameter_sensitivity --resume
+```
+
+This supplementary run uses the existing 41-way 4-shot protocol and five
+fixed seeds. Each seed computes one distance matrix and reuses it for all eight
+neighborhood sizes.
+
 ## Run everything
 
 ```bash

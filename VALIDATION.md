@@ -25,6 +25,14 @@ The optimized distance reuse, multi-column graph propagation, self-collected
 graph reuse, feature prefetching, and low-rank whitening paths were compared
 against their retained computations on fixed inputs. Tests are in `tests/`.
 
+## Additional ecological sensitivity evidence
+
+An additional EMDS-7 41-way 4-shot neighborhood-size run was completed over
+five fixed seeds. Mean accuracies for k=1/3/5/10/15/20/30/50 are
+17.37/64.03/69.98/71.14/72.64/70.87/67.72/65.39%. The default k=10 exactly
+recovers the existing EMDS-7 Graph-z result. This experiment is recorded in the
+data ledger but has not yet been added to the manuscript.
+
 ## CLIP-family reference environment
 
 The OpenAI CLIP and BioCLIP paper values were produced on an RTX 3090 with

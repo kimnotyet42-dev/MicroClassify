@@ -56,6 +56,13 @@
       "result": "zoolake2_graph_sensitivity.csv"
     },
     {
+      "id": "emds7_graph_parameter_sensitivity",
+      "paper_outputs": ["candidate EMDS-7 kNN sensitivity column"],
+      "module": "experiments.emds7_graph_parameter_sensitivity",
+      "resume": true,
+      "result": "emds7_graph_sensitivity.csv"
+    },
+    {
       "id": "runtime",
       "paper_outputs": ["runtime table"],
       "module": "experiments.runtime_benchmark",
