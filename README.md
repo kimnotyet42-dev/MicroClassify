@@ -17,6 +17,7 @@ methods/       Backbones, whitening, graph propagation, thresholds, caching,
                baselines, and result writing
 experiments/   Entry points for the manuscript experiments
 plots/         Figure generation from experiment CSV files
+tools/         Comparison of generated results with manuscript reference values
 results/       Generated raw and summary CSV files; ignored by Git
 cache/         Resumable feature caches; ignored by Git
 figures/       Generated PDF figures; ignored by Git
@@ -162,6 +163,25 @@ python reproduce_all.py --config configs/server.ini
 
 `experiment_manifest.json` maps each manuscript output to its command and
 result file.
+
+## Check manuscript results
+
+After running the experiments, compare the generated results with
+`expected_paper_values.json`:
+
+```bash
+python tools/validate_paper_results.py
+```
+
+For the documented CLIP hardware and software differences, use:
+
+```bash
+python tools/validate_paper_results.py --allow-reference-environment-drift
+```
+
+This option reports those differences as warnings while checking the other
+manuscript values normally. The checker reads existing result files; it does
+not run experiments or change their results.
 
 ## Reproducibility notes
 

@@ -24,6 +24,9 @@ The reference values in `expected_paper_values.json` cover:
 - the effective-resolution accuracy and entropy values at 224, 128, 96, 64,
   48, and 32 pixels.
 
+Use `python tools/validate_paper_results.py` to compare generated results with
+these references. See README.md for the CLIP reference-environment option.
+
 The EMDS-7 full-whitening result at 224 pixels is 78.346% before rounding; the
 manuscript reports 78.4%.
 
