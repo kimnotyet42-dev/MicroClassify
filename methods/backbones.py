@@ -1,7 +1,8 @@
-"""
-多骨干统一接口：把不同骨干产出成统一的 (N, D) 全局图像 embedding，供下游
-cls-NN / graph_z / 白化 复用(它们只吃 (N,D) 矩阵)。
-支持：DINOv3 / DINOv2(均 transformers AutoModel, 取CLS token)、PE-Core(open_clip, image-embed)。
+"""Common backbone interface returning global image embeddings of shape (N, D).
+
+The downstream nearest-centroid, Graph-z, and whitening implementations share
+this representation. DINOv2 and DINOv3 use the CLS token from Transformers;
+PE-Core and the CLIP-family models use their global image embeddings.
 """
 from __future__ import annotations
 
@@ -51,7 +52,7 @@ class Backbone:
 
     @torch.no_grad()
     def embed(self, images: List[Image.Image]) -> np.ndarray:
-        """返回 (B, D) 未归一化的全局 embedding(float32)。"""
+        """Return unnormalized float32 global embeddings of shape (B, D)."""
         raise NotImplementedError
 
 
@@ -106,7 +107,8 @@ class PECoreBackbone(Backbone):
             return
 
         import open_clip
-        # arch 'PE-Core-L-14-336' 已内置于 open_clip；权重用本地上传的 open_clip safetensors(HF不稳)
+        # OpenCLIP includes the PE-Core-L-14-336 architecture; the configured
+        # checkpoint must use OpenCLIP's remapped format on this path.
         self.model, _, self.preprocess = open_clip.create_model_and_transforms(
             "PE-Core-L-14-336", pretrained=str(self.model_path))
         self.model = self.model.to(self.device).eval()
@@ -180,17 +182,18 @@ def build_backbone(
     pe_repo: Optional[Path] = None,
 ) -> Backbone:
     """Build a frozen backbone using an explicitly configured checkpoint path."""
-    # 统一 224 做公平跨骨干对比(DINOv2普通位置编码超分外推差;DINOv3 RoPE超分友好，另表单列512)
+    # The cross-backbone comparison uses 224 pixels for DINO models. The
+    # separate 512-pixel DINOv3 result is evaluated by its dedicated protocol.
     cfgs = {
         "dinov3": (HFViTBackbone, 224),
         "dinov2": (HFViTBackbone, 224),
-        # PE 的 open_clip preprocess 固定 336(image_size 对它无效)，用其原生分辨率最公平
+        # PE-Core's official preprocessing fixes its native 336-pixel input.
         "pecore": (PECoreBackbone, 336),
         "openai_clip": (OpenClipImageBackbone, 224),
         "bioclip": (OpenClipImageBackbone, 224),
     }
     if name not in cfgs:
-        raise ValueError(f"未知骨干 {name}，可选 {list(cfgs)}")
+        raise ValueError("Unknown backbone {0}; choose from {1}".format(name, list(cfgs)))
     cls, default_sz = cfgs[name]
     if model_path is None:
         raise RuntimeError("No checkpoint path configured for {0}".format(name))

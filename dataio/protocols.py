@@ -24,14 +24,7 @@ class FSCILSplit:
 
 
 MICROSCOPY_TARGETS = {
-    "golden_mussel": (
-        "淡水壳菜踯行幼虫",
-        "淡水壳菜壳顶幼虫",
-        "淡水壳菜D型幼虫",
-        "淡水壳菜担轮幼虫",
-        "淡水壳菜受精卵",
-        "淡水壳菜n_cell阶段",
-    ),
+    "golden_mussel": ("淡水壳菜",),
     "Daphnia": ("大型溞",),
 }
 
@@ -41,6 +34,21 @@ def group_indices(samples: Sequence[Sample]) -> Dict[str, List[int]]:
     for index, sample in enumerate(samples):
         grouped[sample.label].append(index)
     return dict(grouped)
+
+
+def support_for_classes(
+    grouped: Dict[str, List[int]],
+    selected: Sequence[str],
+    shot: int,
+    seed: int,
+) -> List[List[int]]:
+    """Draw the deterministic class-wise support used by EMDS comparisons."""
+    output = []
+    for label in selected:
+        indices = np.asarray(grouped[label], dtype=np.int64).copy()
+        np.random.RandomState(seed).shuffle(indices)
+        output.append(indices[:shot].tolist())
+    return output
 
 
 def zoolake_episodes(
@@ -127,6 +135,8 @@ def microscopy_split(
 ) -> FewShotSplit:
     if task not in MICROSCOPY_TARGETS:
         raise KeyError(f"Unknown microscopy task: {task}")
+    if shot < 1:
+        raise ValueError("shot must be positive")
     grouped = group_indices(samples)
     rng = np.random.RandomState(seed)
     support_groups = []

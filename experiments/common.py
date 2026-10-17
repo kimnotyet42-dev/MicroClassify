@@ -157,11 +157,14 @@ def graph_z_accuracy_from_distance(
     return float(np.mean(zscore_columns(query_scores).argmax(axis=1) == query_labels))
 
 
-def binary_stage_scores(
+def binary_target_scores(
     all_features: np.ndarray,
     split: FewShotSplit,
     settings: GraphSettings,
 ) -> np.ndarray:
+    """Propagate one target class and calibrate scores over its query set."""
+    if len(split.support_groups) != 1:
+        raise ValueError("Binary target recognition requires one positive support group")
     all_features = normalize_rows(all_features)
     nodes, support_local, query_local = localize_split(split)
     episode_features = all_features[nodes]
@@ -173,23 +176,17 @@ def binary_stage_scores(
         sigma_method=settings.sigma_method,
         eps=settings.epsilon,
     )
-    stage_scores = []
-    for support in support_local:
-        seeds = np.zeros(len(episode_features), dtype=np.float32)
-        seeds[support] = 1.0
-        raw, _, _ = graph.propagate_from_transition(
-            transition,
-            seeds,
-            graph_alpha=settings.alpha,
-            graph_max_iter=settings.max_iterations,
-            graph_tol=settings.tolerance,
-        )
-        query_scores = raw[query_local]
-        stage_scores.append(
-            (query_scores - query_scores.mean())
-            / (query_scores.std() + settings.epsilon)
-        )
-    return np.max(np.stack(stage_scores, axis=1), axis=1)
+    seeds = np.zeros(len(episode_features), dtype=np.float32)
+    seeds[support_local[0]] = 1.0
+    raw, _, _ = graph.propagate_from_transition(
+        transition,
+        seeds,
+        graph_alpha=settings.alpha,
+        graph_max_iter=settings.max_iterations,
+        graph_tol=settings.tolerance,
+    )
+    query_scores = raw[query_local]
+    return (query_scores - query_scores.mean()) / (query_scores.std() + settings.epsilon)
 
 
 def settings_with(

@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 import argparse
-import random
 from pathlib import Path
-from typing import List, Sequence
+from typing import Dict, List, Sequence
 
 import numpy as np
 from PIL import Image
+from tqdm import tqdm
 
 from dataio.datasets import Sample, load_emds7
 from dataio.protocols import emds_allway_splits
@@ -21,11 +21,6 @@ from methods.whitening import normalize_rows
 
 
 RESOLUTIONS = (224, 128, 96, 64, 48, 32)
-ENTROPY_SAMPLE_COUNT = 400
-# The published entropy curve was computed after six earlier dataset summaries
-# had advanced the same seeded RNG.  Preserve the resulting fixed EMDS subsets
-# without retaining those deleted datasets in the repository.
-PUBLISHED_ENTROPY_ADVANCE_COUNTS = (2365, 29499, 423, 7180, 4000, 2329)
 
 
 class EffectiveResolutionSample:
@@ -53,18 +48,50 @@ def grayscale_entropy(image: Image.Image) -> float:
     return float(-np.sum(probabilities * np.log2(probabilities)))
 
 
-def entropy_values(
+def entropy_values_all_resolutions(
     samples: Sequence[Sample],
-    selected_indices: Sequence[int],
-    resolution: int,
-) -> np.ndarray:
-    values = []
-    for index in selected_indices:
-        image = samples[index].open_image()
-        if resolution < 224:
-            image = image.resize((resolution, resolution), Image.BILINEAR)
-        values.append(grayscale_entropy(image))
-    return np.asarray(values, dtype=np.float64)
+    resolutions: Sequence[int],
+) -> Dict[int, np.ndarray]:
+    """Compute every entropy setting from the same complete image collection."""
+    normalized_resolutions = [int(value) for value in resolutions]
+    values = {resolution: [] for resolution in normalized_resolutions}
+    for sample in tqdm(samples, desc="effective-resolution entropy"):
+        image = sample.open_image()
+        for resolution in normalized_resolutions:
+            transformed = image
+            if resolution < 224:
+                transformed = image.resize(
+                    (resolution, resolution),
+                    Image.BILINEAR,
+                )
+            values[resolution].append(grayscale_entropy(transformed))
+    return {
+        resolution: np.asarray(entropies, dtype=np.float64)
+        for resolution, entropies in values.items()
+    }
+
+
+def update_existing_entropy_rows(
+    rows: List[dict],
+    entropy_by_resolution: Dict[int, np.ndarray],
+) -> None:
+    """Replace entropy fields without changing stored accuracy results."""
+    rows_by_resolution = {
+        int(row["effective_resolution"]): row
+        for row in rows
+    }
+    missing = sorted(set(entropy_by_resolution) - set(rows_by_resolution))
+    if missing:
+        raise ValueError(
+            "Cannot update entropy because result rows are missing for: {0}".format(
+                ", ".join(str(value) for value in missing)
+            )
+        )
+    for resolution, entropies in entropy_by_resolution.items():
+        row = rows_by_resolution[resolution]
+        row["entropy_samples"] = len(entropies)
+        row["entropy_mean"] = float(np.mean(entropies))
+        row["entropy_std"] = float(np.std(entropies))
 
 
 def main() -> None:
@@ -72,6 +99,11 @@ def main() -> None:
     parser.add_argument("--resolutions", type=int, nargs="+", default=RESOLUTIONS)
     parser.add_argument("--batch", type=int, default=8)
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument(
+        "--entropy-only",
+        action="store_true",
+        help="Recompute full-dataset entropy while preserving stored accuracies.",
+    )
     parser.add_argument("--output", type=Path, default=None)
     add_config_argument(parser)
     args = parser.parse_args()
@@ -83,18 +115,40 @@ def main() -> None:
     rows = read_rows(output) if args.resume else []
     completed = {int(row["effective_resolution"]) for row in rows}
 
-    entropy_rng = random.Random(0)
-    for population_size in PUBLISHED_ENTROPY_ADVANCE_COUNTS:
-        entropy_rng.sample(
-            range(population_size),
-            min(ENTROPY_SAMPLE_COUNT, population_size),
+    entropy_by_resolution = entropy_values_all_resolutions(
+        samples,
+        args.resolutions,
+    )
+    if args.entropy_only:
+        if not rows:
+            raise ValueError(
+                "--entropy-only requires an existing result file; "
+                "also pass --resume to load it"
+            )
+        update_existing_entropy_rows(rows, entropy_by_resolution)
+        write_rows_atomic(rows, output)
+        for resolution in args.resolutions:
+            entropies = entropy_by_resolution[resolution]
+            print(
+                "Updated effective resolution {0}px: samples={1}, entropy={2:.4f}".format(
+                    resolution,
+                    len(entropies),
+                    float(np.mean(entropies)),
+                ),
+                flush=True,
+            )
+        return
+
+    if rows:
+        update_existing_entropy_rows(
+            rows,
+            {
+                resolution: entropies
+                for resolution, entropies in entropy_by_resolution.items()
+                if resolution in completed
+            },
         )
-    entropy_indices = {}
-    for resolution in args.resolutions:
-        entropy_indices[resolution] = entropy_rng.sample(
-            list(range(len(samples))),
-            min(ENTROPY_SAMPLE_COUNT, len(samples)),
-        )
+        write_rows_atomic(rows, output)
 
     backbone = backbones.build_backbone(
         "dinov3",
@@ -131,9 +185,7 @@ def main() -> None:
                     features, split, DEFAULT_GRAPH_SETTINGS
                 )
             )
-        entropies = entropy_values(
-            samples, entropy_indices[resolution], resolution
-        )
+        entropies = entropy_by_resolution[resolution]
         rows.append(
             {
                 "dataset": "emds7",

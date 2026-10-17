@@ -81,12 +81,11 @@ def transform_with_support_residuals_full(
     residuals: np.ndarray,
     epsilon: float = EPSILON,
 ) -> np.ndarray:
-    """Reference full-covariance whitening used by the FSCIL paper runs.
+    """Full-covariance whitening used by the FSCIL experiments.
 
-    The low-rank function above is mathematically equivalent and is retained
-    for the episodic experiments.  FSCIL keeps this original floating-point
-    path because its published per-split table contains a boundary prediction
-    that changes under the low-rank rearrangement.
+    The low-rank function above is mathematically equivalent and is used for
+    the episodic experiments. FSCIL uses the full-covariance floating-point
+    path to preserve a boundary prediction in the per-split results.
     """
     values = np.asarray(values, dtype=np.float32)
     transform = full_whitening_matrix(residuals, epsilon)

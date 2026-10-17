@@ -30,7 +30,7 @@ def stats_dict(prefix: str, x: np.ndarray) -> Dict[str, Any]:
 def pairwise_distance_matrix(x: np.ndarray, metric: str, eps: float = 1e-8) -> np.ndarray:
     x = np.asarray(x, dtype=np.float32)
     if x.ndim != 2:
-        raise ValueError(f"x ndim 异常: {x.shape}")
+        raise ValueError("Expected a two-dimensional feature matrix: {0}".format(x.shape))
     if metric == "cos":
         x = x / (np.linalg.norm(x, axis=1, keepdims=True) + eps)
         sim = np.clip(x @ x.T, -1.0, 1.0)
@@ -43,7 +43,7 @@ def pairwise_distance_matrix(x: np.ndarray, metric: str, eps: float = 1e-8) -> n
         d = np.sqrt(d2)
         np.fill_diagonal(d, 0.0)
         return d.astype(np.float32)
-    raise ValueError(f"未知 metric: {metric}")
+    raise ValueError("Unknown distance metric: {0}".format(metric))
 
 
 def sigma_from_knn_dist(
@@ -69,10 +69,10 @@ def sigma_from_knn_dist(
         upper = dist[np.triu_indices(n, k=1)]
         upper = upper[np.isfinite(upper) & (upper > eps)]
         if upper.size == 0:
-            raise RuntimeError("无法从距离矩阵估计全局中位数带宽")
+            raise RuntimeError("Cannot estimate global-median bandwidth")
         sigma = np.full(n, np.median(upper), dtype=np.float32)
         return np.maximum(sigma, eps).astype(np.float32)
-    raise ValueError(f"未知 sigma_method: {sigma_method}")
+    raise ValueError("Unknown bandwidth method: {0}".format(sigma_method))
 
 
 def build_knn_transition(
@@ -85,24 +85,24 @@ def build_knn_transition(
 ) -> Union[Tuple[np.ndarray, Dict[str, Any]], np.ndarray]:
     n = dist.shape[0]
     if dist.shape != (n, n):
-        raise ValueError(f"dist shape 异常: {dist.shape}")
+        raise ValueError("Distance matrix must be square: {0}".format(dist.shape))
     if not (1 <= int(knn_k) < n):
-        raise ValueError(f"knn_k={knn_k} 不合法，n={n}")
+        raise ValueError("knn_k={0} is invalid for n={1}".format(knn_k, n))
     if not (1 <= int(k_sigma) < n):
-        raise ValueError(f"k_sigma={k_sigma} 不合法，n={n}")
+        raise ValueError("k_sigma={0} is invalid for n={1}".format(k_sigma, n))
     if int(k_sigma) > int(knn_k):
-        raise ValueError(f"k_sigma={k_sigma} 不能大于 knn_k={knn_k}")
+        raise ValueError("k_sigma={0} exceeds knn_k={1}".format(k_sigma, knn_k))
 
     k = int(knn_k)
-    # 只取前 k+1 个最近邻（含自身），用 argpartition 避免对整行 (n×n) 做全排序
+    # Retrieve the k neighbors plus self without fully sorting every row.
     rows = np.arange(n)[:, None]
     part = np.argpartition(dist, kth=k, axis=1)[:, :k + 1]
-    order = part[rows, np.argsort(dist[rows, part], axis=1)]   # (n, k+1) 距离升序，[:,0]=自身
+    order = part[rows, np.argsort(dist[rows, part], axis=1)]
     knn = order[:, 1:k + 1]
     neighbor_dist = dist[rows, knn].astype(np.float32)
     sigma = sigma_from_knn_dist(neighbor_dist, order, dist, sigma_method, int(k_sigma), eps)
 
-    # 权重向量化（与逐节点循环完全等价）
+    # Vectorized equivalent of assigning Gaussian weights node by node.
     denom = 2.0 * sigma[:, None].astype(np.float64) * sigma[knn].astype(np.float64) + eps
     exponent = -(neighbor_dist.astype(np.float64) ** 2) / denom
     wij = np.exp(exponent)
@@ -115,7 +115,7 @@ def build_knn_transition(
     row_sum = w.sum(axis=1, keepdims=True)
     if np.any(row_sum <= 1e-12):
         bad = np.where(row_sum.ravel() <= 1e-12)[0]
-        raise RuntimeError(f"KNN 图存在孤立点: {bad[:10].tolist()}")
+        raise RuntimeError("kNN graph has isolated nodes: {0}".format(bad[:10].tolist()))
     trans = (w / row_sum).astype(np.float32)
 
     info = {}  # type: Dict[str, Any]
@@ -153,11 +153,11 @@ def graph_propagate_score(
     return_info: bool = False,
 ) -> Union[Tuple[np.ndarray, Dict[str, Any]], np.ndarray]:
     if not seed_idx:
-        raise RuntimeError("seed_idx 为空")
+        raise RuntimeError("seed_idx is empty")
     n = np.asarray(x).shape[0]
     for i in seed_idx:
         if i < 0 or i >= n:
-            raise IndexError(f"seed_idx 越界: {i}, n={n}")
+            raise IndexError("seed_idx out of range: {0}, n={1}".format(i, n))
     dist = pairwise_distance_matrix(x, metric, eps)
     trans, info = build_knn_transition(
         dist, knn_k, k_sigma, sigma_method, eps, return_info=True
@@ -216,26 +216,6 @@ def graph_propagate_nway(
         graph_tol=graph_tol,
     )
     return F  # (n_nodes, n_classes)
-
-
-def pairwise_lifted_dist(x_raw: np.ndarray) -> np.ndarray:
-    """Pairwise cosine distance from a lifted observer at (0,...,0, z).
-
-    All sample vectors stay in their original space (no z dimension added).
-    The observer sits at distance z above the hyperplane, where z = mean L2 norm.
-
-    Pairwise formula:
-        cos(xi, xj) = (xi·xj + z²) / (√(‖xi‖²+z²) · √(‖xj‖²+z²))
-    """
-    x_raw = np.asarray(x_raw, dtype=np.float32)
-    z = float(np.linalg.norm(x_raw, axis=1).mean())
-    norms_sq = np.sum(x_raw * x_raw, axis=1) + z * z          # (n,)
-    dot      = x_raw @ x_raw.T + z * z                         # (n, n)
-    denom    = np.sqrt(norms_sq[:, None] * norms_sq[None, :])  # (n, n)
-    sim      = np.clip(dot / (denom + 1e-8), -1.0, 1.0)
-    d        = (1.0 - sim).astype(np.float32)
-    np.fill_diagonal(d, 0.0)
-    return d
 
 
 def graph_propagate_nway_from_dist(

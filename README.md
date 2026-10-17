@@ -1,61 +1,81 @@
 # MicroClassify reproducibility code
 
-This directory reproduces the experiments retained in the reduced manuscript:
-EMDS-7, the self-collected microscopy dataset, and ZooLake2. Deleted pathology,
-natural-image, graph-size, and exploratory experiments are intentionally absent.
+This repository contains the code used to reproduce the experiments reported
+in the MicroClassify manuscript. The experiments use EMDS-7, a self-collected
+microscopy dataset, and ZooLake2.
 
-Start with [SETUP.md](SETUP.md). A reproducer edits only
-`configs/paths.ini`; paper protocols remain fixed in the experiment code.
+See [SETUP.md](SETUP.md) for environment installation and local path
+configuration. After configuring `configs/paths.ini`, the experiments can be
+run using the commands below.
 
-## Structure
+## Repository structure
 
 ```text
 configs/       Machine-specific path template
 dataio/        Dataset readers and deterministic evaluation protocols
-methods/       Frozen backbones, whitening, graph propagation, thresholds,
-               feature caching, baselines, and result writing
-experiments/   One entry point for each retained experimental question
-plots/         Figures generated from experiment CSV files
-tests/         Protocol and numerical-equivalence checks
+methods/       Backbones, whitening, graph propagation, thresholds, caching,
+               baselines, and result writing
+experiments/   Entry points for the manuscript experiments
+plots/         Figure generation from experiment CSV files
 results/       Generated raw and summary CSV files; ignored by Git
 cache/         Resumable feature caches; ignored by Git
 figures/       Generated PDF figures; ignored by Git
 ```
 
-## Paper experiments
+## Experiment commands
 
-All commands are run from this directory. Add `--resume` to continue a partial
-experiment.
+Run all commands from the repository root. The `--resume` option continues an
+interrupted experiment from its completed units.
 
-### EMDS-7 FSCIL, base-shot study, session curve, and split results
+### EMDS-7 few-shot class-incremental learning
 
 ```bash
 python -m experiments.emds7_fscil --resume
 python -m plots.plot_fscil_sessions
 ```
 
-Outputs: `results/emds7_fscil.csv`, `emds7_fscil_sessions.csv`,
-`emds7_fscil_splits.csv`, and `figures/sessions.pdf`.
+The experiment produces the main FSCIL comparison, the base-class shot study,
+the session curve, and the ten per-split AA/PD results. Outputs are written to
+`results/emds7_fscil.csv`, `results/emds7_fscil_sessions.csv`,
+`results/emds7_fscil_splits.csv`, and `figures/sessions.pdf`.
 
-### Self-collected binary results and EMDS-7 one-vs-rest scan
+### Self-collected binary recognition and threshold ablation
 
 ```bash
-python -m experiments.threshold_ablation --suite all --workers 8 --resume
+python -m experiments.golden_mussel --resume
+python -m experiments.daphnia --resume
 ```
 
-This also evaluates direct Otsu, equal-weight KDE + Otsu, weighted KDE + Otsu,
-and the oracle threshold on exactly the same decision scores.
+The command evaluates the golden-mussel and *Daphnia magna* recognition tasks.
+It compares direct Otsu, equal-weight KDE plus Otsu, weighted KDE plus Otsu,
+and an oracle threshold on the same decision scores.
+
+### EMDS-7 controlled target proportions
+
+```bash
+python -m experiments.emds7_target_prevalence --resume
+```
+
+The protocol uses 19 eligible target classes and ten support-set seeds. Each
+query batch contains 200 images, with 40, 20, 10, or 5 positive images to
+obtain target proportions of 20%, 10%, 5%, and 2.5%. For each target-class and
+seed pair, the same support set is used at every proportion and the query
+subsets are nested.
 
 ### EMDS-7 comparison with all-class-support classifiers
 
 ```bash
 python -m experiments.binary_model_comparison --cv-jobs 1 --resume
+python -m experiments.binary_common_query_microclassify --resume
 ```
 
-The paper rows are DINOv3 + SimpleShot, DINOv3 + logistic regression,
-BioCLIP + logistic regression, and OpenAI CLIP + logistic regression.
+The first command evaluates DINOv3 plus SimpleShot, DINOv3 plus logistic
+regression, BioCLIP plus logistic regression, and OpenAI CLIP plus logistic
+regression. The second evaluates MicroClassify on the same query sets. Four
+images are reserved from every class and removed from the common query set;
+MicroClassify receives only the four support images of the target class.
 
-### ZooLake2 main table, module ablation, and cross-backbone table
+### Multi-way classification, module ablation, and backbone comparison
 
 ```bash
 python -m experiments.module_backbone_ablation \
@@ -64,9 +84,11 @@ python -m experiments.module_backbone_ablation \
   --resume
 ```
 
-The DINOv3/ZooLake2 row also supplies the NC, Graph-z, and whitening + Graph-z
-values used by the main ZooLake2 table. The fully supervised MobileNet row is a
-cited result from Chen et al. (2025), not an experiment reproduced here.
+This command produces the EMDS-7 and ZooLake2 module-ablation and
+cross-backbone results. Its DINOv3/ZooLake2 results also provide the nearest
+centroid, Graph-z, and whitening plus Graph-z rows in the ZooLake2 main table.
+The fully supervised MobileNet result is taken from Chen et al. (2025) and is
+not generated by this repository.
 
 ### ZooLake2 labeled-shot curve
 
@@ -75,52 +97,62 @@ python -m experiments.zoolake2_shot_curve --resume
 python -m plots.plot_zoolake2_shot_curve
 ```
 
-The curve uses the fixed 31-class protocol, 15 queries per class, and 100
-episodes for each of 4, 8, 12, 16, 20, and 24 shots.
+The curve uses 31 fixed classes, 15 query images per class, and 100 episodes at
+each of 4, 8, 12, 16, 20, and 24 shots.
 
-### Runtime table
+### Runtime measurement
 
 ```bash
 python -m experiments.runtime_benchmark
 ```
 
-Runtime is hardware dependent. This command measures the published workload;
-exact wall-clock values are expected only on equivalent hardware and software.
+The two workloads contain 390 self-collected images and 1,600 EMDS-7 images.
+Whitening time includes within-class residual construction and Ledoit--Wolf
+whitening-matrix estimation. Runtime depends on the hardware and software
+environment. Add `--resume` to retain a completed dataset if the measurement
+is interrupted.
 
-### EMDS-7 effective-resolution experiment
+### EMDS-7 effective resolution
 
 ```bash
 python -m experiments.effective_resolution --resume
 python -m plots.plot_effective_resolution
 ```
 
-### ZooLake2 graph-parameter sensitivity
+To recompute the entropy curve over all EMDS-7 images without rerunning feature
+extraction or classification, use:
+
+```bash
+python -m experiments.effective_resolution --resume --entropy-only
+python -m plots.plot_effective_resolution
+```
+
+### Graph-parameter sensitivity
+
+ZooLake2:
 
 ```bash
 python -m experiments.graph_parameter_sensitivity --analysis all --resume
 ```
 
-Each episode computes its pairwise distance matrix once and reuses it for all
-neighborhood and bandwidth settings. Raw per-episode values and a summary CSV
-are written incrementally.
-
-### EMDS-7 neighborhood-size sensitivity
+EMDS-7:
 
 ```bash
-python -m experiments.emds7_graph_parameter_sensitivity --resume
+python -m experiments.emds7_graph_parameter_sensitivity --analysis all --resume
 ```
 
-This supplementary run uses the existing 41-way 4-shot protocol and five
-fixed seeds. Each seed computes one distance matrix and reuses it for all eight
-neighborhood sizes.
+Both commands evaluate eight neighborhood sizes and four bandwidth estimators.
+Use `--analysis neighbors` or `--analysis bandwidth` to run one analysis only.
+Distance matrices are reused across parameter settings with identical data
+splits.
 
-## Run everything
+## Run all experiments
 
 ```bash
 python reproduce_all.py
 ```
 
-Useful alternatives:
+Useful alternatives are:
 
 ```bash
 python reproduce_all.py --skip-runtime
@@ -128,38 +160,18 @@ python reproduce_all.py --only emds7_fscil
 python reproduce_all.py --config configs/server.ini
 ```
 
-The machine-readable mapping from manuscript outputs to commands is stored in
-`experiment_manifest.json`.
+`experiment_manifest.json` maps each manuscript output to its command and
+result file.
 
-After the runs finish, compare every generated manuscript value with the
-checked-in reference table:
+## Reproducibility notes
 
-```bash
-python tools/validate_paper_results.py
-```
+Feature embeddings and intermediate matrices are cached where they can be
+reused without changing dataset eligibility, support/query membership, random
+seeds, image preprocessing, model precision, metrics, or aggregation. Generated
+results can be checked against `expected_paper_values.json`.
 
-On hardware other than the RTX 3090 CLIP reference environment, use
-`--allow-reference-environment-drift` to keep the documented CUDA-autocast
-differences as warnings while still enforcing every other manuscript value.
-
-## Reproducibility rule
-
-Optimizations may reuse feature caches, distance matrices, graph transitions,
-or label columns, but must not change dataset eligibility, support/query
-membership, random seeds, image preprocessing, model precision, metrics, or
-aggregation. A migrated experiment is accepted only after its raw outputs and
-rounded manuscript values agree with the retained reference implementation.
-
-OpenAI CLIP and BioCLIP use CUDA autocast, matching the original comparison
-run. Their few-shot predictions can change slightly across GPU and PyTorch
-versions when a query lies close to a decision boundary. The manuscript values
-were produced with Python 3.12.3, PyTorch 2.8.0+cu128, OpenCLIP 3.3.0, and an
-RTX 3090. `VALIDATION.md` records both that reference and the local RTX 3050
-rerun rather than silently treating them as identical.
-
-## Current verification status
-
-The repository has been migrated to the shared `methods/` and `dataio/`
-interfaces. Static, import, protocol, numerical-equivalence, and manuscript
-result checks have been run locally. See `VALIDATION.md` for exact matches,
-hardware-sensitive results, and cache provenance.
+OpenAI CLIP and BioCLIP use CUDA autocast. Their predictions can differ slightly
+across GPU and PyTorch versions when a query lies close to a decision boundary.
+The manuscript values were generated with Python 3.12.3, PyTorch 2.8.0+cu128,
+OpenCLIP 3.3.0, and an RTX 3090. Exact matches, hardware-sensitive results, and
+feature-cache checks are documented in [VALIDATION.md](VALIDATION.md).

@@ -21,7 +21,7 @@ The CLIP-family comparison values in the manuscript were generated on an RTX
 3090 with Python 3.12.3, PyTorch 2.8.0+cu128, and OpenCLIP 3.3.0. CUDA autocast
 can move a few boundary predictions on different hardware; see `VALIDATION.md`.
 
-CPU execution is supported for post-processing and tests. A CUDA device is
+CPU execution is supported for post-processing. A CUDA device is
 recommended when image features must be extracted from scratch.
 
 ## 2. Configure data and model paths
@@ -66,8 +66,9 @@ $env:NUMEXPR_NUM_THREADS = '1'
 From this directory, run:
 
 ```bash
-python -m unittest discover -s tests -v
 python reproduce_all.py --help
+python -m experiments.golden_mussel --help
+python -m experiments.daphnia --help
 ```
 
 Feature caches contain an ordered sample fingerprint, backbone name, input

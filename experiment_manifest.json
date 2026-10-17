@@ -17,20 +17,40 @@
       "reference": {"base_shot_25_w_graph_z_aa": 85.6, "tolerance": 0.05}
     },
     {
-      "id": "threshold_ablation",
-      "paper_outputs": ["self-collected binary table", "EMDS-7 one-vs-rest scan", "threshold ablation"],
-      "module": "experiments.threshold_ablation",
-      "args": ["--suite", "all", "--workers", "8"],
+      "id": "golden_mussel",
+      "paper_outputs": ["self-collected binary-recognition table: golden mussel larvae, 2/3/5-shot"],
+      "module": "experiments.golden_mussel",
       "resume": true,
-      "result": "threshold_ablation.csv",
-      "reference": {"golden_mussel_f1": 97.7, "daphnia_f1": 92.9, "tolerance": 0.05}
+      "result": "golden_mussel.csv"
+    },
+    {
+      "id": "daphnia",
+      "paper_outputs": ["self-collected binary-recognition table: Daphnia magna, 2/3/5-shot"],
+      "module": "experiments.daphnia",
+      "resume": true,
+      "result": "daphnia.csv"
+    },
+    {
+      "id": "emds7_target_prevalence",
+      "paper_outputs": ["EMDS-7 controlled target-proportion table and paired diagnostics"],
+      "module": "experiments.emds7_target_prevalence",
+      "resume": true,
+      "result": "emds7_target_prevalence.csv"
     },
     {
       "id": "binary_model_comparison",
-      "paper_outputs": ["EMDS-7 foundation-model classifier comparison"],
+      "paper_outputs": ["EMDS-7 all-class-support classifier rows"],
       "module": "experiments.binary_model_comparison",
+      "args": ["--cv-jobs", "1"],
       "resume": true,
       "result": "binary_model_comparison.csv"
+    },
+    {
+      "id": "binary_common_query_microclassify",
+      "paper_outputs": ["EMDS-7 MicroClassify row on the common comparison query sets"],
+      "module": "experiments.binary_common_query_microclassify",
+      "resume": true,
+      "result": "binary_common_query_microclassify.csv"
     },
     {
       "id": "zoolake2_shot_curve",
@@ -57,8 +77,9 @@
     },
     {
       "id": "emds7_graph_parameter_sensitivity",
-      "paper_outputs": ["candidate EMDS-7 kNN sensitivity column"],
+      "paper_outputs": ["EMDS-7 kNN sensitivity", "EMDS-7 bandwidth sensitivity"],
       "module": "experiments.emds7_graph_parameter_sensitivity",
+      "args": ["--analysis", "all"],
       "resume": true,
       "result": "emds7_graph_sensitivity.csv"
     },

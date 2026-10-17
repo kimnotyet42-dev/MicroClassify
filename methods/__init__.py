@@ -1,1 +1,1 @@
-"""Shared implementations used by the retained MicroClassify experiments."""
+"""Shared method implementations for the MicroClassify experiments."""

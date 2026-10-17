@@ -4,12 +4,12 @@ from __future__ import annotations
 import argparse
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Sequence, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 
 from dataio.datasets import load_emds7
-from dataio.protocols import emds_class_pool, group_indices
+from dataio.protocols import emds_class_pool, group_indices, support_for_classes
 from experiments.cli import add_config_argument, device_name, output_path, runtime_paths
 from methods import backbones
 from methods.baselines import logistic_predict, one_vs_rest_f1, simpleshot_predict
@@ -25,20 +25,6 @@ PAPER_METHODS = {
     "bioclip_logistic": ("bioclip", "logistic"),
     "openai_clip_logistic": ("openai_clip", "logistic"),
 }
-
-
-def support_for_classes(
-    grouped: Dict[str, List[int]],
-    selected: Sequence[str],
-    shot: int,
-    seed: int,
-) -> List[List[int]]:
-    output = []
-    for label in selected:
-        indices = np.asarray(grouped[label], dtype=np.int64).copy()
-        np.random.RandomState(seed).shuffle(indices)
-        output.append(indices[:shot].tolist())
-    return output
 
 
 def summarize(rows: List[dict], output: Path) -> None:
