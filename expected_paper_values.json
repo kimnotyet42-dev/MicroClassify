@@ -33,9 +33,9 @@
       "5": {"weighted_kde_otsu": [98.65, 0.20], "oracle": [99.50, 0.38]}
     },
     "Daphnia": {
-      "2": {"weighted_kde_otsu": [92.91, 0.32], "oracle": [98.34, 0.78]},
-      "3": {"weighted_kde_otsu": [92.62, 0.25], "oracle": [98.32, 0.72]},
-      "5": {"weighted_kde_otsu": [92.53, 0.31], "oracle": [98.29, 0.55]}
+      "2": {"weighted_kde_otsu": [92.91, 0.32], "oracle": [98.29, 0.75]},
+      "3": {"weighted_kde_otsu": [92.66, 0.26], "oracle": [98.24, 0.72]},
+      "5": {"weighted_kde_otsu": [92.57, 0.32], "oracle": [98.42, 0.45]}
     }
   },
   "emds_target_prevalence": {

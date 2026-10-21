@@ -42,7 +42,7 @@ Windows users should use forward slashes in the INI file, for example:
 ```ini
 [datasets]
 emds7 = D:/datasets/EMDS7/EMDS7
-self_collected = D:/datasets/Microscopy
+self_collected = D:/datasets/MicroscopyNew1014jpg
 zoolake2 = D:/datasets/ZooLake2
 ```
 
